@@ -76,22 +76,27 @@ def is_private_profile(browser, logger, following=True):
     :param following: Not accessed
     :return: None if profile cannot be verified
     """
-
+    global shared_data
+    data = None
     try:
         # Get profile owner information
         shared_data = get_shared_data(browser)
 
         # Sometimes shared_data["entry_data"]["ProfilePage"][0] is empty, but get_additional_data()
         # fetches all data needed
-        get_key = shared_data.get("entry_data").get("ProfilePage")
 
+        if shared_data.get("entry_data"):
+            get_key = shared_data.get("entry_data").get("ProfilePage")
+        else:
+            get_key = None
         if get_key:
             data = get_key[0]
         else:
             data = get_additional_data(browser)
     finally:
+        if not data:
+            data = shared_data
         is_private = data["graphql"]["user"]["is_private"]
-
         logger.info(
             "Checked if '{}' is private, and it is: '{}'".format(
                 data["graphql"]["user"]["username"], is_private
@@ -2634,10 +2639,8 @@ def get_additional_data(browser):
     #         break
     original_url = browser.current_url
     if not additional_data:
-        browser.get('view-source:'+ browser.current_url +'?__a=1&__d=dis')
         text = browser.find_element(By.TAG_NAME, "pre").text
         additional_data = json.loads(re.search("{.*}", text).group())
-        browser.get(original_url)
 
     return additional_data
 
